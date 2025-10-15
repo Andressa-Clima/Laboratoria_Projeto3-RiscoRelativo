@@ -222,6 +222,173 @@ SELECT * FROM quartis_calculados;
 
 ---
 
+## Agrupar dados de acordo com variáveis categóricas
+
+Foram identificadas as variáveis e incluídas para a visualização.
+
+## Visualizar variáveis categóricas
+
+Foram incluídos gráficos para a apresentação do dashboard além dos scorecards.
+
+## Aplicar medidas de tendência central
+
+Foram aplicadas medidas de tendência central em idade, dependentes, salários e empréstimos por cliente.
+
+## Ver distribuição
+
+✔
+
+## Aplicar medidas de dispersão
+
+✔
+
+## Calcular quartis, decis ou percentis
+
+Foram calculados quartis das seguintes variáveis numéricas:
+
+```sql
+WITH quartis_calculados AS (
+SELECT
+user_id,
+age,
+last_month_salary,
+number_dependents,
+total_emprestimos,
+more_90_days_overdue,
+using_lines_not_secured_personal_assets,
+number_times_delayed_payment_loan_30_59_days,
+debt_ratio,
+qtd_real_estate,
+qtd_other,
+faixa_etaria,
+default_flag,
+
+-- Calculando quartis para idade
+NTILE(4) OVER (ORDER BY age) AS quartil_idade,
+
+-- Calculando quartis para salário
+NTILE(4) OVER (ORDER BY last_month_salary) AS quartil_salario,
+
+-- Calculando quartis para dependentes
+NTILE(4) OVER (ORDER BY number_dependents) AS quartil_dependentes,
+
+-- Calculando quartis para empréstimos
+NTILE(4) OVER (ORDER BY total_emprestimos) AS quartil_emprestimos,
+
+-- Calculando quartis para atrasos >90 dias
+NTILE(4) OVER (ORDER BY more_90_days_overdue) AS quartil_atrasos_90dias,
+
+-- Calculando quartis para dívida não garantida
+NTILE(4) OVER (ORDER BY using_lines_not_secured_personal_assets) AS quartil_divida_nao_garantida,
+
+-- Calculando quartis para atrasos 30-59 dias
+NTILE(4) OVER (ORDER BY number_times_delayed_payment_loan_30_59_days) AS quartil_atrasos_30_59dias,
+
+-- Calculando quartis para razão de dívida
+NTILE(4) OVER (ORDER BY debt_ratio) AS quartil_debt_ratio
+
+FROM projeto3-riscorelativo-467822.supercaja.user_info_V2
+)
+
+SELECT * FROM quartis_calculados;
+```
+
+## Calcular correlação entre variáveis
+
+✔
+
+## Calcular o risco relativo
+
+Alguns cálculos de risco relativo:
+
+* 🔴 Atrasos >90 dias (maior risco geral)
+
+  * Quartil 4: Risco 3,80x (🔴 Muito Alto)
+* 🟠 Dívida Não Garantida
+
+  * Quartil 4: Risco 2,46x (🔴 Muito Alto)
+* 🟠 Empréstimos
+
+  * Quartil 4: Risco 1,86x (🔴 Muito Alto)
+* 🟠 Idade
+
+  * Quartil 1: Risco 1,80x
+  * Quartil 4: Risco 0,28x (🟢 Baixo)
+* 🟠 Salário
+
+  * Quartil 4: Risco 0,44x (🟢 Baixo)
+* 🔴 Atrasos >90 dias
+
+  * Quartil 1: Risco 0,04x (🟢 Baixo)
+
+```sql
+risco_por_variavel AS (
+SELECT
+'idade' AS variavel,
+quartil_idade AS quartil,
+COUNT() AS total_grupo,
+SUM(CASE WHEN default_flag = 'Sim' THEN 1 ELSE 0 END) AS maus_pagadores,
+SUM(CASE WHEN default_flag = 'Sim' THEN 1 ELSE 0 END) / COUNT() AS risco_absoluto
+FROM quartis
+GROUP BY quartil_idade
+
+UNION ALL
+
+SELECT
+'salario' AS variavel,
+quartil_salario AS quartil,
+COUNT() AS total_grupo,
+SUM(CASE WHEN default_flag = 'Sim' THEN 1 ELSE 0 END) AS maus_pagadores,
+SUM(CASE WHEN default_flag = 'Sim' THEN 1 ELSE 0 END) / COUNT() AS risco_absoluto
+FROM quartis
+GROUP BY quartil_salario
+
+UNION ALL
+
+SELECT
+'dependentes' AS variavel,
+quartil_dependentes AS quartil,
+COUNT() AS total_grupo,
+SUM(CASE WHEN default_flag = 'Sim' THEN 1 ELSE 0 END) AS maus_pagadores,
+SUM(CASE WHEN default_flag = 'Sim' THEN 1 ELSE 0 END) / COUNT() AS risco_absoluto
+FROM quartis
+GROUP BY quartil_dependentes
+
+UNION ALL
+
+SELECT
+'emprestimos' AS variavel,
+quartil_emprestimos AS quartil,
+COUNT() AS total_grupo,
+SUM(CASE WHEN default_flag = 'Sim' THEN 1 ELSE 0 END) AS maus_pagadores,
+SUM(CASE WHEN default_flag = 'Sim' THEN 1 ELSE 0 END) / COUNT() AS risco_absoluto
+FROM quartis
+GROUP BY quartil_emprestimos
+
+UNION ALL
+
+SELECT
+'divida_nao_garantida' AS variavel,
+quartil_divida_nao_garantida AS quartil,
+COUNT() AS total_grupo,
+SUM(CASE WHEN default_flag = 'Sim' THEN 1 ELSE 0 END) AS maus_pagadores,
+SUM(CASE WHEN default_flag = 'Sim' THEN 1 ELSE 0 END) / COUNT() AS risco_absoluto
+FROM quartis
+GROUP BY quartil_divida_nao_garantida
+
+UNION ALL
+
+SELECT
+'debt_ratio' AS variavel,
+quartil_debt_ratio AS quartil,
+COUNT() AS total_grupo,
+SUM(CASE WHEN default_flag = 'Sim' THEN 1 ELSE 0 END) AS maus_pagadores,
+SUM(CASE WHEN default_flag = 'Sim' THEN 1 ELSE 0 END) / COUNT() AS risco_absoluto
+FROM quartis
+GROUP BY quartil_debt_ratio
+)
+```
+
 ## 🔴 Cálculo de Risco Relativo e Score
 
 O risco relativo foi calculado para diversas variáveis, sendo os dias de atraso a maior influência.
